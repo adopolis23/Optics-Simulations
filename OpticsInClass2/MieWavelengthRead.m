@@ -7,7 +7,7 @@ for n = 1:15
 end
 
 [A, C] = fscanf(fid,'%f');
-Data = reshape(A,6,[])';
+Data = reshape(A,7,[])';
 
 lambda = Data(:,1);
 I = Data(:,6);
