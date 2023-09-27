@@ -1,4 +1,4 @@
-[theta, phasefn] = MiePhaseFnRead('filename')
+[theta, phasefn] = MiePhaseFnRead('q_2_sim.txt')
 
 
 angle = [-180:0.1:180]

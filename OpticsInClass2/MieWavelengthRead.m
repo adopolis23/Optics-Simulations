@@ -10,7 +10,7 @@ end
 Data = reshape(A,7,[])';
 
 lambda = Data(:,1);
-I = Data(:,6);
+I = Data(:,7);
 
 fclose(fid);
 
