@@ -1,9 +1,9 @@
-[lambda, I] = MieWavelengthRead('q_3_sim.txt')
+[lambda, I] = MieWavelengthRead('q_3_a0_sim.txt')
 
 
 % Fitting
 fun = @(parameters)model(parameters,lambda,I);
-parameters = fminsearch(fun,[0 1]);
+parameters = fminsearch(fun,[10 4]);
 
 [sse, fittedcurve] = model(parameters,lambda,I);
 residuals = I-fittedcurve
