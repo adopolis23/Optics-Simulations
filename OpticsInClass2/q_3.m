@@ -1,3 +1,5 @@
+clear all
+
 [lambda, I] = MieWavelengthRead('q_3_a0_sim.txt')
 
 

@@ -15,16 +15,16 @@ total_phase = [invphasefn(:,:); phasefn(2:end,1)];
 %ylabel("Phase Function")
 
 
-angle2 = angle(1301:2301)
+angle2 = angle(1301:2301)'
 total_phase2 = total_phase(1301:2301)
 
 
-fun = @(params)henyey(params,transpose(angle2),total_phase2);
+fun = @(params)henyey(params,angle2,total_phase2);
 params = fminsearch(fun, [0.5]);
 
 
 
-[sse, fittedcurve] = henyey(params,transpose(angle2),total_phase2);
+[sse, fittedcurve] = henyey(params,angle2,total_phase2);
 residuals = total_phase2-fittedcurve;
 
 %plotting

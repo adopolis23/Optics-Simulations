@@ -8,6 +8,6 @@ C = params(3);
 %fittedcurve = A*exp(-B.*xdata);
 %fittedcurve = A*(xdata.^(-1.*B));
 
-fittedcurve = A.*exp(xdata./B)+C
+fittedcurve = (A.*exp(xdata./B))+C
 
 sse = sum((ydata - fittedcurve).^2);
