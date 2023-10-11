@@ -7,9 +7,8 @@ data = decaydata(100,:)'
 
 
 fun = @(params)model(params,decay_time,data);
-
-Options = optimset('MaxIter', 100000);
-params = fminsearch(fun, [1, 1, 1]);
+Options = optimset('MaxIter', 10000000);
+params = fminsearch(fun, [10, 10, 10]);
 
 
 
