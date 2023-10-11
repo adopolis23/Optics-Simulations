@@ -20,7 +20,7 @@ residuals = data-fittedcurve
 %plotting
 figure
 subplot(3,1,[1 2])
-plot(decay_time,decay_time,'bo',decay_time,fittedcurve,'r');
+plot(decay_time,data,'bo',decay_time,fittedcurve,'r');
 xlabel('Time');
 ylabel('Data');
 legend('Data','Fit');
