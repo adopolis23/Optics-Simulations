@@ -3,12 +3,12 @@ clear all
 load("pO2_data.mat")
 
 
-data = decaydata(100,:)'
+data = decaydata(300,:)'
 
 
 fun = @(params)model(params,decay_time,data);
-Options = optimset('MaxIter', 10000000);
-params = fminsearch(fun, [10, 10, 10]);
+Options = optimset('MaxIter', 10000000, 'MaxFunEvals', 1000000);
+params = fminsearch(fun, [5, 0.00005, 3.4]);
 
 
 
