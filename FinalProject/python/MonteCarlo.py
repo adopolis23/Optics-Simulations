@@ -1,6 +1,7 @@
 #imports
 import random
 import math
+import time
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -19,10 +20,10 @@ nout = 1.0
 ntissue = 1.33
 
 #Number of photons to be simulated
-Nphotons = 10000
+Nphotons = 20000
 
 #Photon survival parameters
-epsilon = 0.0001
+epsilon = 0.001
 m = 10
 
 #specular reflection
@@ -32,10 +33,10 @@ Rs = Rsp*Nphotons
 
 class Photon:
     def __init__(self):
-        self.position = [0, 0, 0]
+        self.position = [0.0, 0.0, 0.0]
         
         #x, y, and z cosigns
-        self.direction = [0, 0, 1]
+        self.direction = [0.0, 0.0, 1.0]
         
         self.weight = 1
         
@@ -51,6 +52,12 @@ class Photon:
     def reduceWeight(self):
         new_w = self.weight - (self.weight * (mua / (mua + mus)))
         self.weight = new_w
+
+        if self.weight < epsilon:
+            if random.random() < (1/m):
+                self.weight = m * self.weight
+            else:
+                self.weight = 0
     
     def updateDirection(self):
         theta = np.arccos((1/(2*g))*(1+g**2-((1-g**2)/(1-g+2*g*random.random()))**2))
@@ -65,6 +72,9 @@ class Photon:
             new_mux = math.sin(theta)*(self.direction[0]*self.direction[2]*math.cos(omega)-self.direction[1]*math.sin(omega))/(math.sqrt(1-(self.direction[2]**2)))+self.direction[0]*math.cos(theta)
             new_muy = math.sin(theta)*(self.direction[1]*self.direction[2]*math.cos(omega)+self.direction[0]*math.sin(omega))/(math.sqrt(1-(self.direction[2]**2)))+self.direction[1]*math.cos(theta)
             new_muz = -1 * math.sin(theta)*math.cos(omega)*math.sqrt(1-(self.direction[2]**2))+self.direction[2]*math.cos(theta)
+
+            new_mux = math.sin(theta) * ((self.direction[0]*self.direction[2]*math.cos(omega) - self.direction[1]*math.sin(omega)) / (math.sqrt(1-self.direction[2]**2))) + self.direction[0] * math.cos(theta)
+
                                        
             self.direction[0] = new_mux    
             self.direction[1] = new_muy  
@@ -73,12 +83,6 @@ class Photon:
     
     def isAlive(self):
         if self.weight <= epsilon:
-
-            if random.random() < (1/m):
-                self.weight = m * self.weight
-                return True
-
-            #print("Weight < 0")
             return False
         return True
     
@@ -98,13 +102,13 @@ def progressBar(current, total, percentUpdate):
     delta = total * percentUpdate
 
     if current % delta == 0:
-        percentage = str((current // delta) * percentUpdate * 100)
-        print(str(percentage)+"%")
+        percentage = str(int((current // delta) * percentUpdate * 100))
+        print(percentage+"%")
         #print(print("{} %".format(percentage)))
 
         
 def stepFromDistrobution(x):
-    return (-1 * math.log(x)) / mus 
+    return (-1 * math.log(x)) / (mus + mua) 
 
 def plotPoints(x, y, z):
     fig = plt.figure()
@@ -138,7 +142,17 @@ def plotPoints2D(x, y):
     #ax.plot(x,y,z, color='r')
     plt.show()
 
+def plotHistogram(positions):
+    distance_histogram = [0] * 100
+    for i in range(len(positions[0])):
+        distance = math.sqrt(positions[0][i]**2 + positions[1][i]**2)
+        #distances.append(distance)
 
+        if int(distance*100) < len(distance_histogram):
+            distance_histogram[int(distance*100)] += 1
+
+    plt.plot(distance_histogram)
+    plt.show()
 
 
 
@@ -150,13 +164,23 @@ def plotPoints2D(x, y):
 #MAIN LOOP
 
 pos_vec2d = [[], []]
+start_time = time.time()
+
 for iteration in range(int(Nphotons)):
     pos_vec3d = [[], [], []]
     photon = Photon()
     
-    progressBar(iteration, Nphotons, 0.01)
+    progressBar(iteration, Nphotons, 0.05)
 
     while photon.isAlive():
+
+        #save positions for plotting
+        if iteration == Nphotons-1:
+            pos_vec3d[0].append(photon.position[0])
+            pos_vec3d[1].append(photon.position[1])
+            pos_vec3d[2].append(photon.position[2])
+
+
         #save prev position and move to new position
         photon.move(path_length=stepFromDistrobution(random.random()))
 
@@ -166,20 +190,19 @@ for iteration in range(int(Nphotons)):
             #Update Reflection Transmission
             #print("Left Tissue")
             photon.weight = 0
+            pos_vec2d[0].append(photon.position[0])
+            pos_vec2d[1].append(photon.position[1])
 
         photon.updateDirection()
         
 
-        #save positions for plotting
-        if iteration == Nphotons-1:
-            pos_vec3d[0].append(photon.position[0])
-            pos_vec3d[1].append(photon.position[1])
-            pos_vec3d[2].append(photon.position[2])
-    
-    pos_vec2d[0].append(photon.position[0])
-    pos_vec2d[1].append(photon.position[1])
+elapsed_time = time.time() - start_time
 
-
+print("Total simulation time = {} seconds".format(elapsed_time))
+print("{} out of {} photons reflected.".format(len(pos_vec2d[0]), Nphotons))
 plotPoints2D(pos_vec2d[0], pos_vec2d[1])
 plotPoints(pos_vec3d[0], pos_vec3d[1], pos_vec3d[2])
-#plt.show()
+plotHistogram(pos_vec2d)
+
+
+
