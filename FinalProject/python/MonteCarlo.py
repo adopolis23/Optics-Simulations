@@ -1,5 +1,5 @@
 #imports
-import random
+import random   
 import math
 import time
 import numpy as np
@@ -20,7 +20,8 @@ nout = 1.0
 ntissue = 1.33
 
 #Number of photons to be simulated
-Nphotons = 20000
+Nphotons = 100000
+
 
 #Photon survival parameters
 epsilon = 0.001
@@ -28,7 +29,9 @@ m = 10
 
 #specular reflection
 Rsp = ((nout - ntissue)**2) / ((nout + ntissue)**2)
-Rs = Rsp*Nphotons
+N_total = Nphotons
+Nphotons = int(Rsp*Nphotons)
+print("Nphotons is {}".format(Nphotons))
 
 
 class Photon:
@@ -166,16 +169,16 @@ def plotHistogram(positions):
 pos_vec2d = [[], []]
 start_time = time.time()
 
-for iteration in range(int(Nphotons)):
+for iteration in range(Nphotons):
     pos_vec3d = [[], [], []]
     photon = Photon()
     
-    progressBar(iteration, Nphotons, 0.05)
+    progressBar(iteration, Nphotons, 0.01)
 
     while photon.isAlive():
 
         #save positions for plotting
-        if iteration == Nphotons-1:
+        if iteration == int(Nphotons-1):
             pos_vec3d[0].append(photon.position[0])
             pos_vec3d[1].append(photon.position[1])
             pos_vec3d[2].append(photon.position[2])
@@ -199,7 +202,7 @@ for iteration in range(int(Nphotons)):
 elapsed_time = time.time() - start_time
 
 print("Total simulation time = {} seconds".format(elapsed_time))
-print("{} out of {} photons reflected.".format(len(pos_vec2d[0]), Nphotons))
+print("{} out of {} photons reflected.".format(len(pos_vec2d[0]), N_total))
 plotPoints2D(pos_vec2d[0], pos_vec2d[1])
 plotPoints(pos_vec3d[0], pos_vec3d[1], pos_vec3d[2])
 plotHistogram(pos_vec2d)
