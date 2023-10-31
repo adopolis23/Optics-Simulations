@@ -20,7 +20,7 @@ nout = 1.0
 ntissue = 1.33
 
 #Number of photons to be simulated
-Nphotons = 100000
+N_total = 3000
 
 
 #Photon survival parameters
@@ -29,9 +29,11 @@ m = 10
 
 #specular reflection
 Rsp = ((nout - ntissue)**2) / ((nout + ntissue)**2)
-N_total = Nphotons
-Nphotons = int(Rsp*Nphotons)
-print("Nphotons is {}".format(Nphotons))
+Rs = Rsp*N_total
+Nphotons = int(N_total - Rs)
+
+#source detector seperations to keep track of
+source_detector_seperations = [1.0, 2.5]
 
 
 class Photon:
@@ -66,13 +68,13 @@ class Photon:
         theta = np.arccos((1/(2*g))*(1+g**2-((1-g**2)/(1-g+2*g*random.random()))**2))
         omega = 2 * math.pi * random.random()
         
-        if self.direction[2] > 0.999:
+        if abs(self.direction[2]) > 0.999:
             self.direction[0] = math.sin(theta) * math.cos(omega)
             self.direction[1] = math.sin(theta) * math.sin(omega)
             self.direction[2] = np.sign(self.direction[2]) * math.cos(theta)
         
         else:
-            new_mux = math.sin(theta)*(self.direction[0]*self.direction[2]*math.cos(omega)-self.direction[1]*math.sin(omega))/(math.sqrt(1-(self.direction[2]**2)))+self.direction[0]*math.cos(theta)
+            #new_mux = math.sin(theta)*(self.direction[0]*self.direction[2]*math.cos(omega)-self.direction[1]*math.sin(omega))/(math.sqrt(1-(self.direction[2]**2)))+self.direction[0]*math.cos(theta)
             new_muy = math.sin(theta)*(self.direction[1]*self.direction[2]*math.cos(omega)+self.direction[0]*math.sin(omega))/(math.sqrt(1-(self.direction[2]**2)))+self.direction[1]*math.cos(theta)
             new_muz = -1 * math.sin(theta)*math.cos(omega)*math.sqrt(1-(self.direction[2]**2))+self.direction[2]*math.cos(theta)
 
@@ -111,7 +113,7 @@ def progressBar(current, total, percentUpdate):
 
         
 def stepFromDistrobution(x):
-    return (-1 * math.log(x)) / (mus + mua) 
+    return (-1 * math.log(x)) / (mus) 
 
 def plotPoints(x, y, z):
     fig = plt.figure()
@@ -159,8 +161,24 @@ def plotHistogram(positions):
 
 
 
+def source_detector_plot(positions):
+    distances = []
+    for i in range(len(positions[0])):
+        distances.append(math.sqrt(positions[0][i]**2 + positions[1][i]**2))
 
+    for separation in source_detector_seperations:
+        total_count = 0
+        dp = 0.1 * separation
+        lower_bound = separation - dp
+        upper_bound = separation + dp
 
+        for distance in distances:
+            if distance > lower_bound and distance < upper_bound:
+                total_count += 1
+        
+        print("For rho = {} Total count = {}".format(separation, total_count))
+
+    
 
 
 
@@ -203,6 +221,7 @@ elapsed_time = time.time() - start_time
 
 print("Total simulation time = {} seconds".format(elapsed_time))
 print("{} out of {} photons reflected.".format(len(pos_vec2d[0]), N_total))
+source_detector_plot(pos_vec2d)
 plotPoints2D(pos_vec2d[0], pos_vec2d[1])
 plotPoints(pos_vec3d[0], pos_vec3d[1], pos_vec3d[2])
 plotHistogram(pos_vec2d)
