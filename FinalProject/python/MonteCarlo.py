@@ -20,7 +20,7 @@ nout = 1.0
 ntissue = 1.33
 
 #Number of photons to be simulated
-N_total = 3000
+N_total = 1000
 
 
 #Photon survival parameters
@@ -35,6 +35,15 @@ Nphotons = int(N_total - Rs)
 #source detector seperations to keep track of
 source_detector_seperations = [1.0, 2.5]
 
+#sum of all photon weights reflected
+total_weight_reflected = 0.0
+
+#sum of all photon weights absorbed
+total_weight_absorbed = 0.0
+
+#weight absorbed and reflected 
+absorbtion_matrix = []
+
 
 class Photon:
     def __init__(self):
@@ -44,7 +53,11 @@ class Photon:
         self.direction = [0.0, 0.0, 1.0]
         
         self.weight = 1
+
+        self.weight_absorbed = 0.0
+        self.weight_reflected = 0.0
         
+
         #TODO maybe initialize Pathlength and Scoring Parameters
     
     
@@ -55,13 +68,18 @@ class Photon:
         self.position[2] = self.position[2] + self.direction[2]*path_length
         
     def reduceWeight(self):
-        new_w = self.weight - (self.weight * (mua / (mua + mus)))
+        delta_w = (self.weight * (mua / (mua + mus)))
+        new_w = self.weight - delta_w
         self.weight = new_w
+
+        #keep track of total weight absorbed
+        self.weight_absorbed = self.weight_absorbed + delta_w
 
         if self.weight < epsilon:
             if random.random() < (1/m):
                 self.weight = m * self.weight
             else:
+                self.weight_absorbed = self.weight_absorbed + photon.weight
                 self.weight = 0
     
     def updateDirection(self):
@@ -92,11 +110,8 @@ class Photon:
         return True
     
     def isInTissue(self):
-        if self.position[2] < 0:
-            #print("self.position[2] < 0")
-            return False
-        elif self.position[2] > thickness:
-            #print("self.position[2] > thickness")
+        if self.position[2] < 0 or self.position[2] > thickness:
+            self.weight_reflected = self.weight_reflected + photon.weight
             return False
         return True
         
@@ -183,7 +198,6 @@ def source_detector_plot(positions):
 
 
 #MAIN LOOP
-
 pos_vec2d = [[], []]
 start_time = time.time()
 
@@ -191,7 +205,7 @@ for iteration in range(Nphotons):
     pos_vec3d = [[], [], []]
     photon = Photon()
     
-    progressBar(iteration, Nphotons, 0.01)
+    progressBar(iteration, N_total, 0.01)
 
     while photon.isAlive():
 
@@ -202,25 +216,40 @@ for iteration in range(Nphotons):
             pos_vec3d[2].append(photon.position[2])
 
 
-        #save prev position and move to new position
+        #move to new position
         photon.move(path_length=stepFromDistrobution(random.random()))
 
-        photon.reduceWeight()
 
         if photon.isInTissue() == False:
-            #Update Reflection Transmission
-            #print("Left Tissue")
+            #Photon was reflected
             photon.weight = 0
             pos_vec2d[0].append(photon.position[0])
             pos_vec2d[1].append(photon.position[1])
+        
+        photon.reduceWeight()
 
         photon.updateDirection()
+    
+    absorbtion_matrix.append([photon.weight_absorbed, photon.weight_reflected, photon.weight_absorbed+photon.weight_reflected])
+    total_weight_reflected = total_weight_reflected + photon.weight_reflected
+    total_weight_absorbed = total_weight_absorbed + photon.weight_absorbed
         
 
 elapsed_time = time.time() - start_time
 
-print("Total simulation time = {} seconds".format(elapsed_time))
+
+#date print / plot
+print("\n\nTotal simulation time = {} seconds".format(elapsed_time))
 print("{} out of {} photons reflected.".format(len(pos_vec2d[0]), N_total))
+print("Total Weight Absorbed = {} Total Weight Reflected = {}\n".format(total_weight_absorbed, (total_weight_reflected + Rs)))
+
+print("Photon#   Weight Absorbed   Weight Reflected   Sum (First 20 Photons)\n")
+
+for i in range(20):
+    print("{}        {:.4f}        {:.4f}       {:.4f}".format(i, absorbtion_matrix[i][0], absorbtion_matrix[i][1], absorbtion_matrix[i][2]))
+
+print("\n\n")
+
 source_detector_plot(pos_vec2d)
 plotPoints2D(pos_vec2d[0], pos_vec2d[1])
 plotPoints(pos_vec3d[0], pos_vec3d[1], pos_vec3d[2])
