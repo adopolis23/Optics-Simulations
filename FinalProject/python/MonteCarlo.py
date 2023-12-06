@@ -3,7 +3,9 @@ import random
 import math
 import time
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
+from model import model
 
 #thickness of semi-infinite tissue (cm)
 thickness = 50
@@ -19,8 +21,12 @@ g = 0.91
 nout = 1.0
 ntissue = 1.33
 
+#speed of light in CM/SEC
+v = 29979245800
+
 #Number of photons to be simulated
 N_total = 1000
+
 
 
 #Photon survival parameters
@@ -33,7 +39,7 @@ Rs = Rsp*N_total
 Nphotons = int(N_total - Rs)
 
 #source detector seperations to keep track of
-source_detector_seperations = [1.0, 2.5]
+source_detector_seperations = [1.0]
 
 #sum of all photon weights reflected
 total_weight_reflected = 0.0
@@ -56,6 +62,8 @@ class Photon:
 
         self.weight_absorbed = 0.0
         self.weight_reflected = 0.0
+
+        self.total_dist_traveled = 0.0
         
 
         #TODO maybe initialize Pathlength and Scoring Parameters
@@ -66,6 +74,8 @@ class Photon:
         self.position[0] = self.position[0] + self.direction[0]*path_length
         self.position[1] = self.position[1] + self.direction[1]*path_length
         self.position[2] = self.position[2] + self.direction[2]*path_length
+
+        self.total_dist_traveled += path_length
         
     def reduceWeight(self):
         delta_w = (self.weight * (mua / (mua + mus)))
@@ -162,43 +172,97 @@ def plotPoints2D(x, y):
     #ax.plot(x,y,z, color='r')
     plt.show()
 
-def plotHistogram(positions):
-    distance_histogram = [0] * 100
-    for i in range(len(positions[0])):
-        distance = math.sqrt(positions[0][i]**2 + positions[1][i]**2)
-        #distances.append(distance)
 
-        if int(distance*100) < len(distance_histogram):
-            distance_histogram[int(distance*100)] += 1
-
-    plt.plot(distance_histogram)
-    plt.show()
-
-
-
-def source_detector_plot(positions):
+def plotSpatialHistogram(positions):
     distances = []
     for i in range(len(positions[0])):
         distances.append(math.sqrt(positions[0][i]**2 + positions[1][i]**2))
 
-    for separation in source_detector_seperations:
-        total_count = 0
+    fig, axs = plt.subplots(1, 1,
+                            figsize =(10, 7), 
+                            tight_layout = True)
+    
+    axs.hist(distances, bins=30)
+    
+    axs.set_title("Spatially Resolved Histogram")
+
+    # Show plot
+    plt.show()
+
+
+#Time of flight data for reflected photons in a histogram
+def source_detector_plot(positions, separation):
+    tof = []
+
+    for i in range(len(positions[0])):
+        distance = math.sqrt(positions[0][i]**2 + positions[1][i]**2)
+
+        
         dp = 0.1 * separation
         lower_bound = separation - dp
         upper_bound = separation + dp
 
-        for distance in distances:
-            if distance > lower_bound and distance < upper_bound:
-                total_count += 1
-        
-        print("For rho = {} Total count = {}".format(separation, total_count))
 
+        if distance > lower_bound and distance < upper_bound:
+            tof.append(positions[3][i] / (v / ntissue))
+            
+
+    fig, axs = plt.subplots(1, 1,
+                            figsize =(10, 7), 
+                            tight_layout = True)
     
+    axs.hist(tof, bins=20)
+
+    axs.set_title("Time Of Flight Histogram Separation = {}".format(separation))
+    
+    # Show plot
+    plt.show()
+        
+
+
+
+
+    def fitAndEstimateMuEff(pos_vec2d):
+        rhos = np.arange(0.1, 4.0, 0.05)
+        hist = [0] * len(rhos)
+        
+        posAndWeight = []
+        for i in range(len(pos_vec2d[0])):
+            distance = math.sqrt(pos_vec2d[0][i]**2 + pos_vec2d[1][i]**2)
+            posAndWeight.append([distance, pos_vec2d[2][i]])
+        
+        for i, rho in enumerate(rhos):
+            dp = 0.1 * rho
+            lower_bound = rho - dp
+            upper_bound = rho + dp
+
+            for x in posAndWeight:
+                if x[0] > lower_bound and x[0] < upper_bound:
+                    hist[i] += x[1] / (2 * math.pi * rhos[5] * rhos[5] * len(posAndWeight))
+
+        hist = hist[6:]
+        rhos = rhos[6:]
+
+        hist = [x/hist[0] for x in hist]
+
+        #sse, fittedcurve = model(1.6, rhos, hist)
+        #print("SSE is {}".format(sse))
+
+        df = pd.DataFrame(rhos)
+        df.to_csv('rhos.csv') 
+
+        df = pd.DataFrame(hist)
+        df.to_csv('hist.csv') 
+
+        #plt.plot(rhos, hist)
+        #plt.show()
 
 
 
 #MAIN LOOP
-pos_vec2d = [[], []]
+
+#despite its misleading name this vector actually has 4 components - x-position, y-position, weight, total_path
+pos_vec2d = [[], [], [], []]
 start_time = time.time()
 
 for iteration in range(Nphotons):
@@ -219,14 +283,17 @@ for iteration in range(Nphotons):
         #move to new position
         photon.move(path_length=stepFromDistrobution(random.random()))
 
+        photon.reduceWeight()
 
         if photon.isInTissue() == False:
             #Photon was reflected
             photon.weight = 0
             pos_vec2d[0].append(photon.position[0])
             pos_vec2d[1].append(photon.position[1])
+            pos_vec2d[2].append(photon.weight_reflected)
+            pos_vec2d[3].append(photon.total_dist_traveled)
         
-        photon.reduceWeight()
+        
 
         photon.updateDirection()
     
@@ -250,10 +317,12 @@ for i in range(20):
 
 print("\n\n")
 
-source_detector_plot(pos_vec2d)
-plotPoints2D(pos_vec2d[0], pos_vec2d[1])
-plotPoints(pos_vec3d[0], pos_vec3d[1], pos_vec3d[2])
-plotHistogram(pos_vec2d)
+#source_detector_plot(pos_vec2d, 1.0)
+#plotPoints2D(pos_vec2d[0], pos_vec2d[1])
+#plotPoints(pos_vec3d[0], pos_vec3d[1], pos_vec3d[2])
+#plotSpatialHistogram(pos_vec2d)
 
+
+#fitAndEstimateMuEff(pos_vec2d)
 
 

@@ -5,5 +5,5 @@ B = params(2);
 
 %fittedcurve = (A.*exp(-xdata./B))+C
 
-fittedcurve = M * xdata + B
+fittedcurve = (M * xdata) + B
 sse = sum((ydata - fittedcurve).^2);
