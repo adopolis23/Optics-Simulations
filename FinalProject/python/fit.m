@@ -4,8 +4,8 @@ clear all
 load("HistData.mat")
 load("RhosData.mat")
 
-Rhos1 = rhos(1:29)
-Hist1 = hist(1:29)
+Rhos1 = rhos(1:58)
+Hist1 = hist(1:58)
 
 figure
 plot(Rhos1,Hist1,"b")
