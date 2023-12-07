@@ -4,8 +4,8 @@ clear all
 load("HistData.mat")
 load("RhosData.mat")
 
-Rhos1 = rhos(1:29)
-Hist1 = hist(1:29)
+Rhos1 = rhos(1:20)
+Hist1 = hist(1:20)
 
 figure
 plot(Rhos1,Hist1,"b")
@@ -16,7 +16,7 @@ legend('Amp');
 
 %fit for amp8_n
 start_point = [1.6]
-options = optimset('MaxFunEvals',1e13);
+options = optimset('MaxFunEvals',1e11);
 estimates = fminsearch(@(params) model(params,Rhos1, Hist1), start_point, options);
 [sse, FittedCurve] = model(estimates, Rhos1, Hist1); % This statement is only required if you want to get the fits for all time points
 residuals = Hist1 - FittedCurve

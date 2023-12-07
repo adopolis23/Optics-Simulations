@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from model import model
+from modelMueff import model_mueff
 
 #thickness of semi-infinite tissue (cm)
 thickness = 50
@@ -25,7 +26,7 @@ ntissue = 1.33
 v = 29979245800
 
 #Number of photons to be simulated
-N_total = 1000
+N_total = 750000
 
 
 
@@ -128,6 +129,12 @@ class Photon:
 
 
 
+
+
+
+
+
+
 def progressBar(current, total, percentUpdate):
     delta = total * percentUpdate
 
@@ -207,55 +214,71 @@ def source_detector_plot(positions, separation):
             tof.append(positions[3][i] / (v / ntissue))
             
 
-    fig, axs = plt.subplots(1, 1,
-                            figsize =(10, 7), 
-                            tight_layout = True)
-    
-    axs.hist(tof, bins=20)
+    #fig, axs = plt.subplots(1, 1,
+                            #figsize =(10, 7), 
+                            #tight_layout = True)
+    #axs.hist(tof, bins=100)
+    #axs.set_title("Time Of Flight Histogram Separation = {}".format(separation))
 
-    axs.set_title("Time Of Flight Histogram Separation = {}".format(separation))
-    
     # Show plot
+    #plt.show()
+
+    counts, bins = np.histogram(tof, bins=100)
+    bins = bins[:-1]
+    plt.plot(bins, counts)
     plt.show()
+
+
+    df = pd.DataFrame(counts)
+    df.to_csv('tof' + str(separation).replace('.', '_') + '.csv') 
+
+    df = pd.DataFrame(bins)
+    df.to_csv('times' + str(separation).replace('.', '_') + '.csv') 
+
+    
+    
+
+ 
+
+    
         
 
 
 
 
-    def fitAndEstimateMuEff(pos_vec2d):
-        rhos = np.arange(0.1, 4.0, 0.05)
-        hist = [0] * len(rhos)
+def fitAndEstimateMuEff(pos_vec2d):
+    rhos = np.arange(0.1, 3.0, 0.05)
+    hist = [0] * len(rhos)
+    
+    posAndWeight = []
+    for i in range(len(pos_vec2d[0])):
+        distance = math.sqrt(pos_vec2d[0][i]**2 + pos_vec2d[1][i]**2)
+        posAndWeight.append([distance, pos_vec2d[2][i]])
+    
+    for i, rho in enumerate(rhos):
+        dp = 0.1 * rho
+        lower_bound = rho - (dp/2)
+        upper_bound = rho + (dp/2)
+
+        for x in posAndWeight:
+            if x[0] > lower_bound and x[0] < upper_bound:
+                hist[i] += x[1]
         
-        posAndWeight = []
-        for i in range(len(pos_vec2d[0])):
-            distance = math.sqrt(pos_vec2d[0][i]**2 + pos_vec2d[1][i]**2)
-            posAndWeight.append([distance, pos_vec2d[2][i]])
-        
-        for i, rho in enumerate(rhos):
-            dp = 0.1 * rho
-            lower_bound = rho - dp
-            upper_bound = rho + dp
+        #normalize for area of ring 
+        hist[i] = hist[i] / (2 * math.pi * rho**2 * dp)
 
-            for x in posAndWeight:
-                if x[0] > lower_bound and x[0] < upper_bound:
-                    hist[i] += x[1] / (2 * math.pi * rhos[5] * rhos[5] * len(posAndWeight))
 
-        hist = hist[6:]
-        rhos = rhos[6:]
+    hist = [x/hist[0] for x in hist]
 
-        hist = [x/hist[0] for x in hist]
 
-        #sse, fittedcurve = model(1.6, rhos, hist)
-        #print("SSE is {}".format(sse))
+    df = pd.DataFrame(rhos)
+    df.to_csv('rhos.csv') 
 
-        df = pd.DataFrame(rhos)
-        df.to_csv('rhos.csv') 
+    df = pd.DataFrame(hist)
+    df.to_csv('hist.csv') 
 
-        df = pd.DataFrame(hist)
-        df.to_csv('hist.csv') 
-
-        #plt.plot(rhos, hist)
-        #plt.show()
+    plt.plot(rhos, hist)
+    plt.show()
 
 
 
@@ -305,6 +328,18 @@ for iteration in range(Nphotons):
 elapsed_time = time.time() - start_time
 
 
+total_fluence_5cm = 0.0
+for i in range(len(pos_vec2d[0])):
+    distance = math.sqrt(pos_vec2d[0][i]**2 + pos_vec2d[1][i]**2)
+    if distance <= 5.0:
+        total_fluence_5cm += pos_vec2d[2][i]
+total_fluence_5cm = total_fluence_5cm / (2 * math.pi * 25.0)
+
+
+
+
+
+
 #date print / plot
 print("\n\nTotal simulation time = {} seconds".format(elapsed_time))
 print("{} out of {} photons reflected.".format(len(pos_vec2d[0]), N_total))
@@ -317,12 +352,14 @@ for i in range(20):
 
 print("\n\n")
 
-#source_detector_plot(pos_vec2d, 1.0)
+print("Total Fluence from 5.0cm around the origin is: {}".format(total_fluence_5cm))
+
+
+
+source_detector_plot(pos_vec2d, 2.5)
 #plotPoints2D(pos_vec2d[0], pos_vec2d[1])
 #plotPoints(pos_vec3d[0], pos_vec3d[1], pos_vec3d[2])
 #plotSpatialHistogram(pos_vec2d)
-
-
-#fitAndEstimateMuEff(pos_vec2d)
+fitAndEstimateMuEff(pos_vec2d)
 
 
