@@ -1,8 +1,0 @@
-function [sse, fittedcurve] = model(params,xdata,ydata)
-
-A = params(1); %Ua
-B = params(2); %Us
-
-fittedcurve = (A+B)
-
-sse = sum((ydata - fittedcurve).^2);
